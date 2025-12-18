@@ -1,0 +1,35 @@
+package middleware
+
+import (
+	"net/http"
+
+	ut "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
+)
+
+type HttpError struct {
+	Code    int               `json:"code"`
+	Message string            `json:"message"`
+	Fields  map[string]string `json:"fields,omitempty"`
+}
+
+func NewValidationError(verr validator.ValidationErrors, trans ut.Translator) HttpError {
+	fields := make(map[string]string)
+
+	for _, field := range verr {
+		fields[field.Field()] = field.Translate(trans)
+	}
+
+	return HttpError{
+		Code:    http.StatusBadRequest,
+		Message: "validation error",
+		Fields:  fields,
+	}
+}
+
+func NewNotFoundError() HttpError {
+	return HttpError{
+		Code:    http.StatusNotFound,
+		Message: "Not found",
+	}
+}
