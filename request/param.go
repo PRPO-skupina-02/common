@@ -1,9 +1,16 @@
 package request
 
 import (
+	"strconv"
+
 	"github.com/PRPO-skupina-02/common/validation"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+)
+
+const (
+	LimitQueryKey  = "limit"
+	OffsetQueryKey = "offset"
 )
 
 type UUIDParam struct {
@@ -26,4 +33,16 @@ func GetUUIDParam(c *gin.Context, key string) (uuid.UUID, error) {
 	}
 
 	return uuid.MustParse(uuidParam.UUID), nil
+}
+
+func GetIntQueryParam(c *gin.Context, key string) int {
+	return GetIntQueryParamWithDefault(c, key, 0)
+}
+
+func GetIntQueryParamWithDefault(c *gin.Context, key string, fallback int) int {
+	param, err := strconv.Atoi(c.Query(key))
+	if err != nil {
+		return fallback
+	}
+	return param
 }
