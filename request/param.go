@@ -14,7 +14,7 @@ const (
 )
 
 type UUIDParam struct {
-	UUID string `binding:"required,uuid" json:"uuid"`
+	UUID string `binding:"required,uuid,non-nil-uuid" json:"uuid"`
 }
 
 func GetUUIDParam(c *gin.Context, key string) (uuid.UUID, error) {
@@ -22,6 +22,7 @@ func GetUUIDParam(c *gin.Context, key string) (uuid.UUID, error) {
 	uuidParam := UUIDParam{
 		UUID: param,
 	}
+
 	validator, err := validation.GetDefaultValidationEngine()
 	if err != nil {
 		return uuid.Max, err
