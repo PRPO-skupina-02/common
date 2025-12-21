@@ -17,7 +17,8 @@ import (
 func UUIDParamHandler(c *gin.Context) {
 	id, err := GetUUIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, map[string]any{"message": "Param is not a valid UUID", "id": id, "err": err})
+		c.JSON(http.StatusBadRequest, map[string]any{"message": "Param is not a valid UUID", "id": id})
+		return
 	}
 	c.JSON(http.StatusOK, map[string]any{"message": "Param is a valid UUID", "id": id})
 }

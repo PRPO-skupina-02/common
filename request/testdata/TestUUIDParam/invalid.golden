@@ -1,7 +1,4 @@
 {
-  "err": [
-    {}
-  ],
-  "id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
-  "message": "Param is not a valid UUID"
+	"id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+	"message": "Param is not a valid UUID"
 }

@@ -124,6 +124,8 @@ func AssertGoldenJSONWithName(t *testing.T, got []byte, goldenName string, ignor
 		}
 	}
 
+	t.Log("Got: ", string(got))
+
 	var indentedResult bytes.Buffer
 	if string(got) != "" {
 		err := json.Indent(&indentedResult, got, "", "\t")
