@@ -16,7 +16,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
-      - name: Install dependencies
+      - name: Download dependencies
         run: go mod download
       - name: Test
         run: make test
