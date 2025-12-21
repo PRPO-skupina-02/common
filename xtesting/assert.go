@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http/httptest"
@@ -13,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jeffail/gabs/v2"
+	"github.com/buger/jsonparser"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,55 +27,55 @@ var (
 	updateGoldenFiles = flag.Bool("update", false, "update the golden files of this test")
 )
 
-type ValueChecker func(t *testing.T, v *gabs.Container)
+type ValueChecker func(t *testing.T, v string)
 
 func ValueTimeInPastDuration(dur time.Duration) ValueChecker {
-	return func(t *testing.T, v *gabs.Container) {
-		ti, err := time.Parse(time.RFC3339, strings.Trim(v.String(), "\""))
+	return func(t *testing.T, v string) {
+		ti, err := time.Parse(time.RFC3339, strings.Trim(v, "\""))
 		assert.NoError(t, err)
 		assert.WithinRange(t, ti, time.Now().Add(-dur), time.Now())
 	}
 }
 func ValueTime() ValueChecker {
-	return func(t *testing.T, v *gabs.Container) {
-		_, err := time.Parse(time.RFC3339, strings.Trim(v.String(), "\""))
+	return func(t *testing.T, v string) {
+		_, err := time.Parse(time.RFC3339, strings.Trim(v, "\""))
 		assert.NoError(t, err)
 	}
 }
 
 func ValueUUID() ValueChecker {
-	return func(t *testing.T, v *gabs.Container) {
-		_, err := uuid.Parse(strings.Trim(v.String(), "\""))
+	return func(t *testing.T, v string) {
+		_, err := uuid.Parse(strings.Trim(v, "\""))
 		assert.NoError(t, err)
 	}
 }
 
 func ValueRegexp(rx any) ValueChecker {
-	return func(t *testing.T, v *gabs.Container) {
-		assert.Regexp(t, rx, v.String())
+	return func(t *testing.T, v string) {
+		assert.Regexp(t, rx, v)
 	}
 }
 
 func ValueBase64Token(bitLength int) ValueChecker {
-	return func(t *testing.T, v *gabs.Container) {
+	return func(t *testing.T, v string) {
 
-		token, err := base64.RawURLEncoding.DecodeString(strings.Trim(v.String(), "\""))
+		token, err := base64.RawURLEncoding.DecodeString(strings.Trim(v, "\""))
 		assert.NoError(t, err)
 		assert.Len(t, token, bitLength/8)
 	}
 }
 
 func ValueBcryptPassword(password string) ValueChecker {
-	return func(t *testing.T, v *gabs.Container) {
-		storedPassword := bytes.Trim(v.Bytes(), "\"")
-		err := bcrypt.CompareHashAndPassword(storedPassword, []byte(password))
+	return func(t *testing.T, v string) {
+		storedPassword := strings.Trim(v, "\"")
+		err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
 		assert.NoError(t, err)
 	}
 }
 
 func ValueNotEqual(val string) ValueChecker {
-	return func(t *testing.T, v *gabs.Container) {
-		assert.NotEqual(t, val, v.String())
+	return func(t *testing.T, v string) {
+		assert.NotEqual(t, val, v)
 	}
 }
 
@@ -91,7 +92,7 @@ func GenerateValueCheckersForArraysWithOffset(checkers map[string]ValueChecker, 
 		val, ok := checkers[element]
 		if ok {
 			for i := offset; i < n+offset; i++ {
-				result[fmt.Sprintf("%d.%s", i, element)] = val
+				result[fmt.Sprintf("[%d].%s", i, element)] = val
 			}
 		}
 	}
@@ -100,45 +101,45 @@ func GenerateValueCheckersForArraysWithOffset(checkers map[string]ValueChecker, 
 
 func AssertGoldenJSON(t *testing.T, w *httptest.ResponseRecorder, ignore ...ValuesCheckers) {
 	assert.Equal(t, "application/json; charset=utf-8", w.Header().Get("content-type"))
-	AssertGoldenJSONWithName(t, w.Body.String(), "", ignore...)
+	AssertGoldenJSONWithName(t, w.Body.Bytes(), "", ignore...)
 }
 
-func AssertGoldenJSONWithName(t *testing.T, got string, goldenName string, ignore ...ValuesCheckers) {
-	dataString := ""
-	dataStringIndent := ""
-	if got != "" {
-
-		j, err := gabs.ParseJSONBuffer(strings.NewReader(got))
-		assert.NoError(t, err)
-
+func AssertGoldenJSONWithName(t *testing.T, got []byte, goldenName string, ignore ...ValuesCheckers) {
+	if got != nil {
 		if len(ignore) > 0 {
 			for jsonPath, fn := range ignore[0] {
-				if !j.ExistsP(jsonPath) {
+				value, err := jsonparser.GetString(got, strings.Split(jsonPath, ".")...)
+				if errors.Is(err, jsonparser.KeyPathNotFoundError) {
 					continue
 				}
+				assert.NoError(t, err)
 
 				if fn != nil {
-					fn(t, j.Path(jsonPath))
+					fn(t, value)
 
-					_, err := j.SetP("-- Dynamic value --", jsonPath)
+					got, err = jsonparser.Set(got, []byte(`"-- Dynamic value --"`), strings.Split(jsonPath, ".")...)
 					require.Nil(t, err)
 				}
 			}
 		}
-		dataString = j.String()
-		dataStringIndent = j.StringIndent("", "  ")
+	}
+
+	var indentedResult bytes.Buffer
+	if string(got) != "" {
+		err := json.Indent(&indentedResult, got, "", "\t")
+		assert.NoError(t, err)
 	}
 
 	fileNamePath := fmt.Sprintf("testdata/%s%s.golden", t.Name(), goldenName)
 
-	UpdateGoldenIfFlagSet(t, dataStringIndent, fileNamePath)
+	UpdateGoldenIfFlagSet(t, indentedResult.Bytes(), fileNamePath)
 
 	f := ReadGoldenFile(t, fileNamePath)
 
-	if dataString != "" {
-		assert.JSONEq(t, string(f), dataString)
+	if indentedResult.String() != "" {
+		assert.JSONEq(t, string(f), indentedResult.String())
 	} else {
-		assert.Equal(t, string(f), dataString)
+		assert.Equal(t, string(f), indentedResult.String())
 	}
 
 }
@@ -151,10 +152,10 @@ func AssertGoldenDatabaseTable(t *testing.T, db *gorm.DB, query any, ignore map[
 	got, err := json.Marshal(query)
 	assert.NoError(t, err)
 
-	AssertGoldenJSONWithName(t, string(got), ".db."+result.Statement.Schema.Table, ignore)
+	AssertGoldenJSONWithName(t, got, ".db."+result.Statement.Schema.Table, ignore)
 }
 
-func UpdateGoldenIfFlagSet(t *testing.T, got, fileNamePath string) {
+func UpdateGoldenIfFlagSet(t *testing.T, data []byte, fileNamePath string) {
 	if !flag.Parsed() {
 		flag.Parse()
 	}
@@ -162,7 +163,7 @@ func UpdateGoldenIfFlagSet(t *testing.T, got, fileNamePath string) {
 	if *updateGoldenFiles {
 		err := os.MkdirAll(path.Dir(fileNamePath), 0755)
 		require.NoError(t, err)
-		err = os.WriteFile(fileNamePath, []byte(got), 0644)
+		err = os.WriteFile(fileNamePath, data, 0644)
 		if err != nil {
 			t.Fatalf("Error writing to file %s: %s", fileNamePath, err)
 		}
