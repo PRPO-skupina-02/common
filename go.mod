@@ -3,8 +3,8 @@ module github.com/PRPO-skupina-02/common
 go 1.25.1
 
 require (
-	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/Masterminds/sprig/v3 v3.3.0
+	github.com/buger/jsonparser v1.1.1
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
