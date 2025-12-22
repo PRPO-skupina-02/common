@@ -60,6 +60,9 @@ type SortOptions struct {
 
 func SortScope(sort *SortOptions) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
+		if sort == nil {
+			return db
+		}
 		return db.Order(clause.OrderByColumn{
 			Column: clause.Column{
 				Name: sort.Column,
