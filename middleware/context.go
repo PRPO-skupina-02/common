@@ -1,7 +1,8 @@
 package middleware
 
 import (
-	"log/slog"
+	"errors"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	ut "github.com/go-playground/universal-translator"
@@ -20,7 +21,7 @@ func SetContextTransaction(c *gin.Context, tx *gorm.DB) {
 func GetContextTransaction(c *gin.Context) *gorm.DB {
 	tx, ok := c.Get(contextTransactionKey)
 	if !ok {
-		slog.Error("Could not get transaction from context")
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("Could not get transaction from context"))
 		return nil
 	}
 
@@ -34,7 +35,7 @@ func SetContextTranslation(c *gin.Context, trans ut.Translator) {
 func GetContextTranslation(c *gin.Context) ut.Translator {
 	trans, ok := c.Get(contextTranslationKey)
 	if !ok {
-		slog.Error("Could not get translation from context")
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("Could not get translation from context"))
 		return nil
 	}
 
