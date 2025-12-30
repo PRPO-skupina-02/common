@@ -58,6 +58,12 @@ func ErrorMiddleware(c *gin.Context) {
 		return
 	}
 
+	var httpError *HttpError
+	if errors.As(err, &httpError) {
+		c.JSON(httpError.Code, httpError)
+		return
+	}
+
 	c.JSON(http.StatusInternalServerError, map[string]any{
 		"error": c.Errors.Last().Err,
 	})

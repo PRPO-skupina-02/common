@@ -17,13 +17,21 @@ type PaginatedResponse struct {
 	Total  int `json:"total"`
 }
 
-func PaginateScope(offset, limit int) func(db *gorm.DB) *gorm.DB {
+type PaginationOptions struct {
+	Offset int
+	Limit  int
+}
+
+func PaginateScope(pagination *PaginationOptions) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Offset(offset).Limit(limit)
+		if pagination == nil {
+			return db
+		}
+		return db.Offset(pagination.Offset).Limit(pagination.Limit)
 	}
 }
 
-func GetNormalizedPaginationArgs(c *gin.Context) (int, int) {
+func GetNormalizedPaginationArgs(c *gin.Context) *PaginationOptions {
 	offset := GetIntQueryParam(c, OffsetQueryKey)
 	if offset < 0 {
 		offset = 0
@@ -37,16 +45,19 @@ func GetNormalizedPaginationArgs(c *gin.Context) (int, int) {
 		limit = 10
 	}
 
-	return offset, limit
+	return &PaginationOptions{
+		Offset: offset,
+		Limit:  limit,
+	}
 }
 
 func RenderPaginatedResponse(c *gin.Context, data any, total int) {
-	limit, offset := GetNormalizedPaginationArgs(c)
+	pagination := GetNormalizedPaginationArgs(c)
 
 	resp := PaginatedResponse{
 		Data:   data,
-		Limit:  limit,
-		Offset: offset,
+		Limit:  pagination.Limit,
+		Offset: pagination.Offset,
 		Total:  total,
 	}
 
