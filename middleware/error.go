@@ -13,6 +13,10 @@ type HttpError struct {
 	Fields  map[string]string `json:"fields,omitempty"`
 }
 
+func (e *HttpError) Error() string {
+	return e.Message
+}
+
 func NewValidationError(verr validator.ValidationErrors, trans ut.Translator) HttpError {
 	fields := make(map[string]string)
 
