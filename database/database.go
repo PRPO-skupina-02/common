@@ -26,7 +26,7 @@ func GetProdDSN() string {
 }
 
 func OpenAndMigrateProd(migrationsFS embed.FS) (*gorm.DB, error) {
-	return Open(GetProdDSN())
+	return OpenAndMigrate(GetProdDSN(), migrationsFS)
 }
 
 func OpenAndMigrate(dsn string, migrationsFS embed.FS) (*gorm.DB, error) {
