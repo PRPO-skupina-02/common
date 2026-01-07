@@ -76,11 +76,21 @@ func Migrate(db *gorm.DB, migrationsFS embed.FS) error {
 		return err
 	}
 
+	versionBefore, _, err := migrations.Version()
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
+		return err
+	}
+
 	err = migrations.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 
-	slog.Debug("Database migrated successfully")
+	versionAfter, _, err := migrations.Version()
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
+		return err
+	}
+
+	slog.Debug("Database migrated successfully", "before", versionBefore, "after", versionAfter)
 	return nil
 }
