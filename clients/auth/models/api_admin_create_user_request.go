@@ -43,9 +43,7 @@ type APIAdminCreateUserRequest struct {
 	// role
 	// Required: true
 	// Enum: ["customer","employee","admin"]
-	Role struct {
-		ModelsUserRole
-	} `json:"role"`
+	Role *string `json:"role"`
 }
 
 // Validate validates this api admin create user request
@@ -127,9 +125,7 @@ func (m *APIAdminCreateUserRequest) validatePassword(formats strfmt.Registry) er
 var apiAdminCreateUserRequestTypeRolePropEnum []any
 
 func init() {
-	var res []struct {
-		ModelsUserRole
-	}
+	var res []string
 	if err := json.Unmarshal([]byte(`["customer","employee","admin"]`), &res); err != nil {
 		panic(err)
 	}
@@ -138,10 +134,20 @@ func init() {
 	}
 }
 
+const (
+
+	// APIAdminCreateUserRequestRoleCustomer captures enum value "customer"
+	APIAdminCreateUserRequestRoleCustomer string = "customer"
+
+	// APIAdminCreateUserRequestRoleEmployee captures enum value "employee"
+	APIAdminCreateUserRequestRoleEmployee string = "employee"
+
+	// APIAdminCreateUserRequestRoleAdmin captures enum value "admin"
+	APIAdminCreateUserRequestRoleAdmin string = "admin"
+)
+
 // prop value enum
-func (m *APIAdminCreateUserRequest) validateRoleEnum(path, location string, value *struct {
-	ModelsUserRole
-}) error {
+func (m *APIAdminCreateUserRequest) validateRoleEnum(path, location string, value string) error {
 	if err := validate.EnumCase(path, location, value, apiAdminCreateUserRequestTypeRolePropEnum, true); err != nil {
 		return err
 	}
@@ -150,25 +156,20 @@ func (m *APIAdminCreateUserRequest) validateRoleEnum(path, location string, valu
 
 func (m *APIAdminCreateUserRequest) validateRole(formats strfmt.Registry) error {
 
+	if err := validate.Required("role", "body", m.Role); err != nil {
+		return err
+	}
+
+	// value enum
+	if err := m.validateRoleEnum("role", "body", *m.Role); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// ContextValidate validate this api admin create user request based on the context it is used
+// ContextValidate validates this api admin create user request based on context it is used
 func (m *APIAdminCreateUserRequest) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateRole(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *APIAdminCreateUserRequest) contextValidateRole(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 
