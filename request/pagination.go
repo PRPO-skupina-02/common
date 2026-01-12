@@ -120,6 +120,9 @@ func FilterScope(opts *FilterOptions) func(db *gorm.DB) *gorm.DB {
 
 		query := db
 		for _, filter := range opts.Filters {
+			if filter == nil {
+				continue
+			}
 			query = filter.Apply(query)
 		}
 		return query
