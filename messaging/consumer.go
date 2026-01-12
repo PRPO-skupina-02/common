@@ -98,7 +98,7 @@ func (c *Consumer) processMessage(delivery amqp.Delivery) {
 
 	slog.Info("Processing email message",
 		"to", emailMsg.To,
-		"subject", emailMsg.Subject,
+		"template", emailMsg.Template,
 	)
 
 
