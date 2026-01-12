@@ -1,8 +1,10 @@
 package request
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -100,4 +102,63 @@ func GetSortOptions(c *gin.Context) *SortOptions {
 		Column: strings.ToLower(strings.TrimPrefix(sort, "-")),
 		Desc:   desc,
 	}
+}
+
+type Filter interface {
+	Apply(db *gorm.DB) *gorm.DB
+}
+
+type FilterOptions struct {
+	Filters []Filter
+}
+
+func FilterScope(opts *FilterOptions) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if opts == nil || len(opts.Filters) == 0 {
+			return db
+		}
+
+		query := db
+		for _, filter := range opts.Filters {
+			if filter == nil {
+				continue
+			}
+			query = filter.Apply(query)
+		}
+		return query
+	}
+}
+
+func NewFilterOptions(filters ...Filter) *FilterOptions {
+	return &FilterOptions{Filters: filters}
+}
+
+func (fo *FilterOptions) AddFilter(f Filter) *FilterOptions {
+	fo.Filters = append(fo.Filters, f)
+	return fo
+}
+
+type DateRangeFilter struct {
+	Column string
+	Date   time.Time
+}
+
+func (f DateRangeFilter) Apply(db *gorm.DB) *gorm.DB {
+	startOfDay := f.Date.Truncate(24 * time.Hour)
+	endOfDay := startOfDay.Add(24 * time.Hour)
+	return db.Where(fmt.Sprintf("%s >= ? AND %s < ?", f.Column, f.Column), startOfDay, endOfDay)
+}
+
+func GetDateFilter(c *gin.Context, column string) Filter {
+	dateStr := c.Query("date")
+	if dateStr == "" {
+		return nil
+	}
+
+	date, err := time.Parse(time.DateOnly, dateStr)
+	if err != nil {
+		return nil
+	}
+
+	return &DateRangeFilter{Column: column, Date: date}
 }
