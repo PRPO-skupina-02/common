@@ -52,3 +52,17 @@ func NewBadRequestError(msg string) *HttpError {
 		Message: msg,
 	}
 }
+
+func NewUnauthorizedError(msg string) *HttpError {
+	return &HttpError{
+		Code:    http.StatusUnauthorized,
+		Message: msg,
+	}
+}
+
+func NewForbiddenError(msg string) *HttpError {
+	return &HttpError{
+		Code:    http.StatusForbidden,
+		Message: msg,
+	}
+}
